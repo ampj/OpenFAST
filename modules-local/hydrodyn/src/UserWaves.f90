@@ -693,13 +693,39 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    CHARACTER(1024)               :: ErrMsgTmp                     ! Temporary error message for processing
    LOGICAL                       :: isNumeric
    CHARACTER(*), PARAMETER       :: RoutineName = 'UserWaves_Init'
-   CHARACTER(5)                               :: extension(7)     
+   
+   ! ==============================================================================================
+   ! RAINEY from here =============================================================================
+   
+   INTEGER                       :: NumFiles        ! Number of files to load, later defined as 7 (Morison) or 18 (Rainey)
+   CHARACTER(7)                  :: extension(18)   ! Modified to accomodate new file extensions
+   
+   ! until here ===================================================================================   
+   ! ==============================================================================================
    
       ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = ""       
       
-   extension  = (/'.Vxi ','.Vyi ','.Vzi ','.Axi ','.Ayi ','.Azi ','.DynP'/)
+   ! ==============================================================================================
+   ! RAINEY from here =============================================================================
+      
+    IF (InitInp%RaineyF) THEN
+        
+        NumFiles = 18
+    
+    ELSE
+        
+        NumFiles = 7
+    
+    END IF
+    
+    extension  = (/'.Vxi   ','.Vyi   ','.Vzi   ','.Axi   ','.Ayi   ','.Azi   ','.DynP  ','.Vxipx ','.Vxipy ', &
+                   '.Vxipz ','.Vyipx ','.Vyipy ','.Vyipz ','.Vzipx ','.Vzipy ','.Vzipz ','.Elevpx','.Elevpy'/)
+    
+   ! until here ===================================================================================   
+   ! ==============================================================================================
+    
    Delim         = ''
    
 
@@ -748,6 +774,34 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( InitOut%WaveAcc   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
 
+    ! ==============================================================================================
+    ! RAINEY from here =============================================================================
+      
+    IF (InitInp%RaineyF) THEN
+      
+	    ! Allocate arrays for derivatives of surface elevation
+
+	    ALLOCATE ( InitOut%WaveElevPx   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
+	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPx.',  ErrStat,ErrMsg,RoutineName)
+
+	    ALLOCATE ( InitOut%WaveElevPy   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
+	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPy.',  ErrStat,ErrMsg,RoutineName)
+
+	    ! Allocate arrays for derivatives of wave kinematics
+
+	    ALLOCATE ( InitOut%WaveVelPx   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
+	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVelPx.',  ErrStat,ErrMsg,RoutineName)
+
+	    ALLOCATE ( InitOut%WaveVelPy   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
+	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVelPy.',  ErrStat,ErrMsg,RoutineName)
+
+	    ALLOCATE ( InitOut%WaveVelPz   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
+	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVelPz.',  ErrStat,ErrMsg,RoutineName)
+
+    END IF
+      
+    ! until here ===================================================================================   
+    ! ==============================================================================================
    
    
       ! Now check if all the allocations worked properly
@@ -803,7 +857,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveVel (:,:,1)  = WaveData(:,:)
    
    ! Now read the remaining files and check that the elements are consistent with the first file
-   DO iFile = 2,7
+   DO iFile = 2,NumFiles
       
       CALL GetNewUnit( UnWv )
 
@@ -858,7 +912,9 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END DO
       
       END DO
+      
       SELECT CASE (iFile)
+      
          CASE (1)              
             InitOut%WaveVel (:,:,1)  = WaveData(:,:)
          CASE (2)             
@@ -873,6 +929,39 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             InitOut%WaveAcc (:,:,3)  = WaveData(:,:) 
          CASE (7)              
             InitOut%WaveDynP         = WaveData
+    
+        ! ==============================================================================================
+        ! RAINEY from here =============================================================================
+      
+        CASE (8)              
+            InitOut%WaveVelPx (:,:,1)  = WaveData(:,:)
+	    CASE (9)              
+            InitOut%WaveVelPy (:,:,1)  = WaveData(:,:)
+        CASE (10)              
+            InitOut%WaveVelPz (:,:,1)  = WaveData(:,:)
+            
+        CASE (11)              
+            InitOut%WaveVelPx (:,:,2)  = WaveData(:,:)
+        CASE (12)              
+            InitOut%WaveVelPy (:,:,2)  = WaveData(:,:)
+        CASE (13)              
+            InitOut%WaveVelPz (:,:,2)  = WaveData(:,:)
+            
+        CASE (14)              
+            InitOut%WaveVelPx (:,:,3)  = WaveData(:,:)
+        CASE (15)              
+            InitOut%WaveVelPy (:,:,3)  = WaveData(:,:)
+        CASE (16)              
+            InitOut%WaveVelPz (:,:,3)  = WaveData(:,:)
+            
+        CASE (17)              
+            InitOut%WaveElevPx         = WaveData
+        CASE (18)              
+            InitOut%WaveElevPy         = WaveData
+      
+        ! until here ===================================================================================   
+        ! ==============================================================================================
+            
       END SELECT
                   
       CLOSE(UnWv)
@@ -918,6 +1007,23 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveDynP(InitOut%NStepWave,:)    = InitOut%WaveDynP(0,:  )
    InitOut%WaveElev(InitOut%NStepWave,:)     = InitOut%WaveElev(0,:)
    InitOut%nodeInWater(InitOut%NStepWave,:)  = InitOut%nodeInWater(0,:)
+   
+    ! ==============================================================================================
+    ! RAINEY from here =============================================================================
+      
+    IF (InitInp%RaineyF) THEN
+      
+        InitOut%WaveElevPx (InitOut%NStepWave,:)   = InitOut%WaveElevPx (0,:)
+        InitOut%WaveElevPy (InitOut%NStepWave,:)   = InitOut%WaveElevPy (0,:)
+      
+        InitOut%WaveVelPx (InitOut%NStepWave,:,:)  = InitOut%WaveVelPx (0,:,:)
+        InitOut%WaveVelPy (InitOut%NStepWave,:,:)  = InitOut%WaveVelPy (0,:,:)
+        InitOut%WaveVelPz (InitOut%NStepWave,:,:)  = InitOut%WaveVelPz (0,:,:)
+      
+    END IF
+      
+    ! until here ===================================================================================   
+    ! ==============================================================================================
    
    
 CONTAINS

@@ -241,6 +241,9 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveDynP                         {:}{:}     -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveVel                          {:}{:}{:}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+
+typedef   ^                            ^                             LOGICAL                  RaineyF                           -         -        -         "RAINEY - Use Rainey forcing instead of Morison (flag)"
+
 #
 #
 # Define outputs from the initialization routine here:
@@ -344,6 +347,9 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(10)            Delim                           -          -         -         ""        -
+
+typedef   ^                            ^                             LOGICAL                  RaineyF                         -          -         -         "RAINEY - Use Rainey forcing instead of Morison (flag)"
+
 #
 #
 # ..... Inputs ....................................................................................................................

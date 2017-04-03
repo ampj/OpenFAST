@@ -88,7 +88,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -        -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -        -         "Offset between still-water level and mean sea level"    (m)
 
-
 # ..... HD_ModuleMapType ....................................................................................................................
 typedef   ^                            HD_ModuleMapType              MeshMapType              HD_P_2_WRP_P
 typedef   ^                            HD_ModuleMapType              MeshMapType              M_P_2_WRP_P

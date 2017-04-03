@@ -986,7 +986,46 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
+  ! ==============================================================================================
+  ! RAINEY from here =============================================================================
 
+  !-------------------------------------------------------------------------------------------------
+  ! Data section for Rainey forcing flags
+  !-------------------------------------------------------------------------------------------------
+
+    ! Header
+
+    CALL ReadCom( UnIn, FileName, 'Rainey forcing flag header', ErrStat2, ErrMsg2, UnEchoLocal )
+
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+        IF (ErrStat >= AbortErrLev) THEN
+            CALL CleanUp()
+            RETURN
+        END IF
+
+    ! LagrangeF - Convective acceleration flag
+      
+    CALL ReadVar ( UnIn, FileName, InitInp%Waves%LagrangeF, 'LagrangeF', 'Convective acceleration flag', ErrStat2, ErrMsg2, UnEchoLocal )
+    
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+        IF (ErrStat >= AbortErrLev) THEN
+            CALL CleanUp()
+            RETURN
+        END IF     
+
+    ! RaineyF - Rainey forcing flag
+      
+    CALL ReadVar ( UnIn, FileName, InitInp%Morison%RaineyF, 'RaineyF', 'Rainey forcing flag', ErrStat2, ErrMsg2, UnEchoLocal )
+    
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+  ! until here ===================================================================================   
+  ! ==============================================================================================
+      
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for Floating platform force flags
@@ -3258,10 +3297,80 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
    END IF
 
+   ! ==============================================================================================
+   ! RAINEY from here =============================================================================
 
+   ! Check compatibility of Rainey flags with other flags/switches
+
+    IF (InitInp%Morison%RaineyF) THEN
     
+        PRINT *, 'Rainey forcing is enabled'
+    
+        IF (InitInp%Waves%LagrangeF) THEN
+            PRINT *, 'Wave particle acceleration includes Lagrangian terms'
+        END IF
+        
+        IF ( InitInp%PotMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'PotMod must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF    
+   
+        IF ( InitInp%Waves%WaveStMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF
 
+        IF ( InitInp%Waves2%WvDiffQTFF ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WvDiffQTF must be FALSE when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Waves2%WvSumQTFF ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WvSumQTF must be FALSE when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Morison%MSL2SWL /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Current%CurrMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'CurrMod must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%MnDrift /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MnDrift must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%NewmanApp /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'NewmanApp must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%DiffQTF /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'DiffQTF must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%SumQTF /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'SumQTF must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+    ELSE 
+        
+        IF (InitInp%Waves%LagrangeF) THEN
+            CALL SetErrStat( ErrID_Fatal,'LagrangeF must be FALSE if Rainey forcing is disabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF
+        
+    END IF
 
+   ! until here ===================================================================================   
+   ! ==============================================================================================
 
 
    !-------------------------------------------------------------------------------------------------
@@ -4065,6 +4174,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Waves%UnSum        = InitInp%UnSum
          ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
       InitInp%Waves%WtrDpth      = InitInp%Morison%WtrDpth + InitInp%Morison%MSL2SWL ! Adjust for the MSL2SWL
+      
+      ! ==============================================================================================
+      ! RAINEY from here =============================================================================
+      
+      InitInp%Waves%RaineyF = InitInp%Morison%RaineyF
+      
+      ! until here ===================================================================================   
+      ! ==============================================================================================
       
       ! Waves2
       IF (InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN

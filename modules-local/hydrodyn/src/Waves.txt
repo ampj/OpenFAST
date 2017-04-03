@@ -64,6 +64,9 @@ typedef     ^                 ^                 SiKi                 CurrVyi    
 typedef     ^                 ^                 SiKi                 PCurrVxiPz0       -        -        -        "xi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVyiPz0       -        -        -        "yi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 
+typedef     ^                 ^                 LOGICAL              LagrangeF         -        -        -        "RAINEY - Add convective terms to wave particle acceleration (flag)"
+typedef     ^                 ^                 LOGICAL              RaineyF           -        -        -        "RAINEY - Use Rainey forcing instead of Morison (flag)"
+
 
 # Define outputs from the initialization routine here:
 #
@@ -93,6 +96,11 @@ typedef     ^                 ^                 SiKi                 RhoXg      
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 
+typedef     ^                 ^                 SiKi                 WaveElevPx       {:}{:}    -        -        "RAINEY - X derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef     ^                 ^                 SiKi                 WaveElevPy       {:}{:}    -        -        "RAINEY - Y derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef     ^                 ^                 SiKi                 WaveVelPx        {:}{:}{:} -        -        "RAINEY - X derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef     ^                 ^                 SiKi                 WaveVelPy        {:}{:}{:} -        -        "RAINEY - Y derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef     ^                 ^                 SiKi                 WaveVelPz        {:}{:}{:} -        -        "RAINEY - Z derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
