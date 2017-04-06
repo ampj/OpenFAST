@@ -1025,6 +1025,25 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          CALL MOVE_ALLOC( Waves_InitOut%WaveDynP,  InitLocal%Morison%WaveDynP )         
          CALL MOVE_ALLOC( Waves_InitOut%WaveVel,   InitLocal%Morison%WaveVel )         
          CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InitLocal%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
+         
+         ! ==============================================================================================
+         ! RAINEY from here =============================================================================
+         
+         ! Move arrays with derivatives of surface elevation and wave kinematics from Waves InitOutput to Morison InitInput
+         
+         IF (InitLocal%Morison%RaineyF) THEN
+         
+             CALL MOVE_ALLOC( Waves_InitOut%WaveElevPx,   InitLocal%Morison%WaveElevPx )
+             CALL MOVE_ALLOC( Waves_InitOut%WaveElevPy,   InitLocal%Morison%WaveElevPy )
+         
+             CALL MOVE_ALLOC( Waves_InitOut%WaveVelPx,   InitLocal%Morison%WaveVelPx )
+             CALL MOVE_ALLOC( Waves_InitOut%WaveVelPy,   InitLocal%Morison%WaveVelPy )
+             CALL MOVE_ALLOC( Waves_InitOut%WaveVelPz,   InitLocal%Morison%WaveVelPz )
+         
+         END IF
+         
+         ! until here ===================================================================================   
+         ! ==============================================================================================         
 
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or

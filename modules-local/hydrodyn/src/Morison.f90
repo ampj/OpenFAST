@@ -545,6 +545,25 @@ SUBROUTINE DistrDragConst( densWater, Cd, R, tMG, DragConst  )
    
 END SUBROUTINE DistrDragConst
 
+! ==============================================================================================
+! RAINEY from here =============================================================================
+
+! Computes the product Ca*WtrDens*Pi*(R+tMG)^2 to minimize the computations at each time step
+
+SUBROUTINE DistrRaineyConst( densWater, Ca, R, tMG, RaineyConst  ) 
+   
+   REAL(ReKi),         INTENT ( IN    )  :: Ca
+   REAL(ReKi),         INTENT ( IN    )  :: densWater
+   REAL(ReKi),         INTENT ( IN    )  :: R
+   REAL(ReKi),         INTENT ( IN    )  :: tMG
+   REAL(ReKi),         INTENT (   OUT )  :: RaineyConst
+   
+   RaineyConst = Ca*densWater*Pi*(R+tMG)*(R+tMG)
+   
+END SUBROUTINE DistrRaineyConst
+
+! until here ===================================================================================   
+! ==============================================================================================
 
 SUBROUTINE DistrFloodedBuoyancy( densFluid, Z_f, R, t, dRdz, Z, C, g, F_B  ) 
 
@@ -3287,7 +3306,7 @@ END SUBROUTINE CreateLumpedMesh
                                   
 SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWave, WaveAcc, WaveDynP, numNodes, nodes, nodeInWater, numElements, elements, &
                                   numDistribMarkers,  distribMeshIn, distribMeshOut, distribToNodeIndx,  D_F_I,      &
-                                  D_F_B, D_F_DP, D_F_MG, D_F_BF, D_AM_M, D_AM_MG, D_AM_F, D_dragConst, elementWaterStateArr, &
+                                  D_F_B, D_F_DP, D_F_MG, D_F_BF, D_AM_M, D_AM_MG, D_AM_F, D_dragConst, RaineyF, D_RaineyConst, elementWaterStateArr, &
                                   Morison_Rad, ErrStat, ErrMsg )
 
    REAL(ReKi),                             INTENT( IN    )  ::  densWater
@@ -3302,6 +3321,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    TYPE(Morison_MemberType),               INTENT( IN    )  ::  elements(:)
    TYPE(Morison_NodeType),                 INTENT( IN    )  ::  nodes(:)
    INTEGER(IntKi),                         INTENT( IN    )  ::  nodeInWater(0:,:)   ! Flag indicating whether or not a node is in the water at a given wave time
+   LOGICAL,                                INTENT( IN    )  ::  RaineyF         ! RAINEY - Use Rainey forcing instead of Morison (flag) 
    INTEGER,                                INTENT(   OUT )  ::  numDistribMarkers
    !TYPE(Morison_NodeType), ALLOCATABLE,    INTENT(   OUT )  ::  distribMarkers(:)
    TYPE(MeshType),                         INTENT(   OUT )  ::  distribMeshIn
@@ -3320,7 +3340,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    REAL(SiKi), ALLOCATABLE,                INTENT(   OUT )  ::  Morison_Rad(:)       ! radius of each node (for FAST visualization)
    INTEGER,                                INTENT(   OUT )  ::  ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                           INTENT(   OUT )  ::  ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
+   REAL(ReKi),ALLOCATABLE,                 INTENT(   OUT)   ::  D_RaineyConst(:)     ! RAINEY - Stores the product Ca*WtrDens*Pi*(R+tMG)^2 for all nodes 
             
    
    INTEGER                    ::  I, J, count, node2Indx 
@@ -3480,6 +3500,20 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    END IF
    D_dragConst = 0.0
    
+! ==============================================================================================
+! RAINEY from here =============================================================================
+   
+   ALLOCATE ( D_RaineyConst( numDistribMarkers ), STAT = ErrStat )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Error allocating space for the distributed Rainey constants.'
+      ErrStat = ErrID_Fatal
+      RETURN
+   END IF
+   D_RaineyConst = 0.0
+   
+! until here ===================================================================================   
+! ==============================================================================================
+   
    ! Loop over nodes to create all loads on the resulting markers except for the buoyancy loads
    ! For the buoyancy loads, loop over the elements and then apply one half of the resulting value
    ! to each of the interior element nodes but the full value to an end node.  This means that an internal member node will receive 1/2 of its
@@ -3579,6 +3613,20 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
             
           ! This is always computed, but may be zereod out for any given timestep during the CalcOutput work
          CALL DistrDragConst( densWater, nodes(I)%Cd, nodes(I)%R, nodes(I)%tMG, D_dragConst(count) ) 
+         
+         ! ==============================================================================================
+         ! RAINEY from here =============================================================================
+         
+         ! Compute and store the product Ca*WtrDens*Pi*(R+tMG)^2 for the given node, if the flag is true
+         
+         IF (RaineyF) THEN
+         
+            CALL DistrRaineyConst( densWater, nodes(I)%Ca, nodes(I)%R, nodes(I)%tMG, D_RaineyConst(count) )      
+         
+         END IF
+         
+         ! until here ===================================================================================   
+         ! ==============================================================================================
          
          IF ( nodes(I)%FillFlag ) THEN
             IF ( nodes(I)%JointPos(3) <= nodes(I)%FillFSLoc   .AND. nodes(I)%JointPos(3) >= z0 ) THEN
@@ -4074,6 +4122,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       p%NumOuts    = InitInp%NumOuts
       p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
       p%OutSwtch   = InitInp%OutSwtch
+
+      
       ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for MOutLst array.'
@@ -4149,7 +4199,61 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
       
       CALL MOVE_ALLOC( InitInp%nodeInWater, p%nodeInWater )   
       
-      
+    ! ==============================================================================================
+    ! RAINEY from here =============================================================================
+
+    ! Pass on the Rainey data
+
+    p%RaineyF = InitInp%RaineyF
+    
+    IF (InitInp%RaineyF) THEN
+    
+        ALLOCATE ( p%WaveElevPx(0:p%NStepWave, p%NNodes), STAT = ErrStat )
+        IF ( ErrStat /= ErrID_None ) THEN
+           ErrMsg  = ' Error allocating space for array with X derivative of surface elevation.'
+           ErrStat = ErrID_Fatal
+           RETURN
+        END IF
+        p%WaveElevPx = InitInp%WaveElevPx    
+
+        ALLOCATE ( p%WaveElevPy(0:p%NStepWave, p%NNodes), STAT = ErrStat )
+        IF ( ErrStat /= ErrID_None ) THEN
+           ErrMsg  = ' Error allocating space for array with Y derivative of surface elevation.'
+           ErrStat = ErrID_Fatal
+           RETURN
+        END IF
+        p%WaveElevPy = InitInp%WaveElevPy
+        
+    
+        ALLOCATE ( p%WaveVelPx(0:p%NStepWave, p%NNodes, 3), STAT = ErrStat )
+        IF ( ErrStat /= ErrID_None ) THEN
+           ErrMsg  = ' Error allocating space for array with X derivatives of wave kinematics.'
+           ErrStat = ErrID_Fatal
+           RETURN
+        END IF
+        p%WaveVelPx = InitInp%WaveVelPx
+        
+        ALLOCATE ( p%WaveVelPy(0:p%NStepWave, p%NNodes, 3), STAT = ErrStat )
+        IF ( ErrStat /= ErrID_None ) THEN
+           ErrMsg  = ' Error allocating space for array with Y derivatives of wave kinematics.'
+           ErrStat = ErrID_Fatal
+           RETURN
+        END IF
+        p%WaveVelPy = InitInp%WaveVelPy
+        
+        ALLOCATE ( p%WaveVelPz(0:p%NStepWave, p%NNodes, 3), STAT = ErrStat )
+        IF ( ErrStat /= ErrID_None ) THEN
+           ErrMsg  = ' Error allocating space for array with Z derivatives of wave kinematics.'
+           ErrStat = ErrID_Fatal
+           RETURN
+        END IF
+        p%WaveVelPz = InitInp%WaveVelPz
+    
+    END IF
+
+    ! until here ===================================================================================   
+    ! ==============================================================================================      
+    
       
          ! Use the processed geometry information to create the distributed load mesh and associated marker parameters
          
@@ -4159,8 +4263,8 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
       CALL CreateDistributedMesh( InitInp%WtrDens, InitInp%Gravity, InitInp%MSL2SWL, InitInp%WtrDpth, InitInp%NStepWave, InitInp%WaveAcc, InitInp%WaveDynP, &
                                   p%NNodes, p%Nodes, p%nodeInWater, InitInp%NElements, InitInp%Elements, &
                                   p%NDistribMarkers, u%DistribMesh, y%DistribMesh, p%distribToNodeIndx, p%D_F_I, &
-                                  p%D_F_B, p%D_F_DP, p%D_F_MG, p%D_F_BF, p%D_AM_M, p%D_AM_MG, p%D_AM_F, p%D_dragConst, p%elementWaterState, &                 ! 
-                                  InitOut%Morison_Rad,  ErrStat, ErrMsg )
+                                  p%D_F_B, p%D_F_DP, p%D_F_MG, p%D_F_BF, p%D_AM_M, p%D_AM_MG, p%D_AM_F, p%D_dragConst, &                  ! 
+                                  p%RaineyF, p%D_RaineyConst, p%elementWaterState, InitOut%Morison_Rad,  ErrStat, ErrMsg )
                                     
                                  
 
@@ -4500,8 +4604,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       REAL(ReKi)                                        :: sgn
       REAL(ReKi)                                        :: D_AM_M(6,6)
       REAL(ReKi)                                        :: nodeInWater
-      REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
-         ! Initialize ErrStat
+      REAL(ReKi)                                        :: D_dragConst      ! The distributed drag factor
+      REAL(ReKi)                                        :: D_RaineyConst    ! RAINEY - The distributed Rainey factor for given node
+      REAL(ReKi)                                        :: Grad_mat(3,3)    ! RAINEY - Matrix G with gradient of wave kinematics for given node and time step
+      REAL(ReKi)                                        :: Gk(3)            ! RAINEY - Product G*k for given node and time step
+      REAL(ReKi)                                        :: kGk              ! RAINEY - Product k*G*k for given node and time step
+      ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
@@ -4548,6 +4656,55 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          v = vrel - Dot_Product(kvec,vrel)*kvec
          vmag = sqrt( v(1)*v(1) + v(2)*v(2) + v(3)*v(3)  )
          
+         ! ==============================================================================================
+         ! RAINEY from here =============================================================================
+         
+         ! If Rainey flag is true, we enhance the inertia term D_F_I with the Rainey contributions to distributed loads
+         
+         IF (p%RaineyF) THEN
+         
+            ! Retrieve the data related to partial derivatives of wave kinematics and store in matrix Grad_mat
+         
+            Grad_mat(1,1) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPx(:,J,1), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(1,2) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPy(:,J,1), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(1,3) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPz(:,J,1), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+
+            Grad_mat(2,1) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPx(:,J,2), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(2,2) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPy(:,J,2), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(2,3) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPz(:,J,2), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+                                    
+            Grad_mat(3,1) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPx(:,J,3), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(3,2) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPy(:,J,3), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            
+            Grad_mat(3,3) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPz(:,J,3), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+                                    
+            ! Compute product k*G*k
+                           
+            Gk = matmul( Grad_mat,kvec )
+            kGk = Dot_Product(kvec,Gk)
+                                    
+            ! Contribution from axial divergence term in Rainey equations
+            
+            m%D_F_I(:,J) = m%D_F_I(:,J) + elementWaterState * (p%D_RaineyConst(J) * kGk * v)
+         
+         END IF
+         
+         ! until here ===================================================================================   
+         ! ==============================================================================================         
                    
             ! Distributed added mass loads
             ! need to multiply by elementInWater value to zero out loads when out of water 

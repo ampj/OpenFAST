@@ -243,6 +243,11 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 
 typedef   ^                            ^                             LOGICAL                  RaineyF                           -         -        -         "RAINEY - Use Rainey forcing instead of Morison (flag)"
+typedef   ^                            ^                             SiKi                     WaveElevPx                       {:}{:}     -        -         "RAINEY - X derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef   ^                            ^                             SiKi                     WaveElevPy                       {:}{:}     -        -         "RAINEY - Y derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef   ^                            ^                             SiKi                     WaveVelPx                        {:}{:}{:}  -        -         "RAINEY - X derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef   ^                            ^                             SiKi                     WaveVelPy                        {:}{:}{:}  -        -         "RAINEY - Y derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef   ^                            ^                             SiKi                     WaveVelPz                        {:}{:}{:}  -        -         "RAINEY - Z derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
 
 #
 #
@@ -348,7 +353,13 @@ typedef   ^                            ^                             CHARACTER(2
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(10)            Delim                           -          -         -         ""        -
 
-typedef   ^                            ^                             LOGICAL                  RaineyF                         -          -         -         "RAINEY - Use Rainey forcing instead of Morison (flag)"
+typedef   ^                            ^                             LOGICAL                  RaineyF                         -          -        -         "RAINEY - Use Rainey forcing instead of Morison (flag)"
+typedef   ^                            ^                             SiKi                     WaveElevPx                      {:}{:}     -        -         "RAINEY - X derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef   ^                            ^                             SiKi                     WaveElevPy                      {:}{:}     -        -         "RAINEY - Y derivative of instantaneous elevation time-series of incident waves at each of the NWaveKin points where the incident wave kinematics will be computed" (-)
+typedef   ^                            ^                             SiKi                     WaveVelPx                       {:}{:}{:}  -        -         "RAINEY - X derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef   ^                            ^                             SiKi                     WaveVelPy                       {:}{:}{:}  -        -         "RAINEY - Y derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef   ^                            ^                             SiKi                     WaveVelPz                       {:}{:}{:}  -        -         "RAINEY - Z derivative of instantaneous velocity of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (1/s)
+typedef   ^                            ^                             ReKi                     D_RaineyConst                   {:}        -        -         "RAINEY - Stores the product Ca*WtrDens*Pi*(R+tMG)^2 for all nodes in the DistribMesh"        -
 
 #
 #
