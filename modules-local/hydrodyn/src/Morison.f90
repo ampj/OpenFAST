@@ -4608,7 +4608,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       REAL(ReKi)                                        :: D_RaineyConst    ! RAINEY - The distributed Rainey factor for given node
       REAL(ReKi)                                        :: Grad_mat(3,3)    ! RAINEY - Matrix G with gradient of wave kinematics for given node and time step
       REAL(ReKi)                                        :: Gk(3)            ! RAINEY - Product G*k for given node and time step
-      REAL(ReKi)                                        :: kGk              ! RAINEY - Product k*G*k for given node and time step
+      REAL(ReKi)                                        :: kGk              ! RAINEY - Product k.(G*k) for given node and time step
+      REAL(ReKi)                                        :: rotV(3)
+      REAL(ReKi)                                        :: vrelkk(3)        ! RAINEY - Product (vrel.k)*k for given node and time step
       ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -4692,7 +4694,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             Grad_mat(3,3) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVelPz(:,J,3), &
                                     m%LastIndWave, p%NStepWave + 1       )
                                     
-            ! Compute product k*G*k
+            ! Compute product k.(G*k)
                            
             Gk = matmul( Grad_mat,kvec )
             kGk = Dot_Product(kvec,Gk)
@@ -4700,7 +4702,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             ! Contribution from axial divergence term in Rainey equations
             
             m%D_F_I(:,J) = m%D_F_I(:,J) + elementWaterState * (p%D_RaineyConst(J) * kGk * v)
-         
+            
+            ! Compute product (vrel.k)*k
+            
+            vrelkk = Dot_Product(kvec,vrel)*kvec
+            
+            ! Contribution from negative centrifugal term in Rainey equations
+            
+            m%D_F_I(:,J) = m%D_F_I(:,J) + elementWaterState * (-2.0_ReKi * p%D_RaineyConst(J) * cross_product( u%DistribMesh%RotationVel(:,J) , vrelkk ))
+            
          END IF
          
          ! until here ===================================================================================   
