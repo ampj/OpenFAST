@@ -3300,15 +3300,69 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    ! ==============================================================================================
    ! RAINEY from here =============================================================================
 
-   ! Check compatibility of Rainey flags with other flags/switches
+   ! Check compatibility of Lagrange flag with other flags/switches
+
+    IF (InitInp%Waves%LagrangeF) THEN
+    
+        PRINT *, 'Wave particle acceleration includes Lagrangian terms'
+        
+        IF ( InitInp%PotMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'PotMod must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF    
+   
+        IF ( InitInp%Waves%WaveStMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF
+
+        IF ( InitInp%Waves2%WvDiffQTFF ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WvDiffQTF must be FALSE when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Waves2%WvSumQTFF ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WvSumQTF must be FALSE when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Morison%MSL2SWL /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%Current%CurrMod /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'CurrMod must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%MnDrift /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MnDrift must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%NewmanApp /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'NewmanApp must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%DiffQTF /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'DiffQTF must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+        IF ( InitInp%WAMIT2%SumQTF /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'SumQTF must be 0 when Lagrangian acceleration is enabled.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+        END IF  
+        
+    END IF
+
+   ! Check compatibility of Rainey flag with other flags/switches
 
     IF (InitInp%Morison%RaineyF) THEN
     
         PRINT *, 'Rainey forcing is enabled'
-    
-        IF (InitInp%Waves%LagrangeF) THEN
-            PRINT *, 'Wave particle acceleration includes Lagrangian terms'
-        END IF
         
         IF ( InitInp%PotMod /= 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'PotMod must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
@@ -3359,13 +3413,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             CALL SetErrStat( ErrID_Fatal,'SumQTF must be 0 when Rainey forcing is enabled.',ErrStat,ErrMsg,RoutineName)
             RETURN
         END IF  
-        
-    ELSE 
-        
-        IF (InitInp%Waves%LagrangeF) THEN
-            CALL SetErrStat( ErrID_Fatal,'LagrangeF must be FALSE if Rainey forcing is disabled.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-        END IF
         
     END IF
 

@@ -697,7 +697,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! ==============================================================================================
    ! RAINEY from here =============================================================================
    
-   INTEGER                       :: NumFiles        ! Number of files to load, later defined as 7 (Morison) or 18 (Rainey)
+   INTEGER                       :: NumFiles        ! Number of files to load
    CHARACTER(7)                  :: extension(18)   ! Modified to accomodate new file extensions
    
    ! until here ===================================================================================   
@@ -715,8 +715,16 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
         NumFiles = 18
     
     ELSE
+    
+        IF (InitInp%LagrangeF) THEN
         
-        NumFiles = 7
+            NumFiles = 16
+        
+        ELSE
+        
+            NumFiles = 7
+        
+        END IF
     
     END IF
     
@@ -777,15 +785,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
     ! ==============================================================================================
     ! RAINEY from here =============================================================================
       
-    IF (InitInp%RaineyF) THEN
-      
-	    ! Allocate arrays for derivatives of surface elevation
-
-	    ALLOCATE ( InitOut%WaveElevPx   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
-	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPx.',  ErrStat,ErrMsg,RoutineName)
-
-	    ALLOCATE ( InitOut%WaveElevPy   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
-	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPy.',  ErrStat,ErrMsg,RoutineName)
+    IF (InitInp%RaineyF .OR. InitInp%LagrangeF) THEN
 
 	    ! Allocate arrays for derivatives of wave kinematics
 
@@ -797,6 +797,18 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 	    ALLOCATE ( InitOut%WaveVelPz   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
 	    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVelPz.',  ErrStat,ErrMsg,RoutineName)
+        
+        IF (InitInp%RaineyF) THEN
+        
+            ! Allocate arrays for derivatives of surface elevation
+
+	        ALLOCATE ( InitOut%WaveElevPx   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
+	        IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPx.',  ErrStat,ErrMsg,RoutineName)
+
+	        ALLOCATE ( InitOut%WaveElevPy   (0:InitOut%NStepWave,InitInp%NWaveKin ) , STAT=ErrStatTmp )
+	        IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevPy.',  ErrStat,ErrMsg,RoutineName)
+        
+        END IF
 
     END IF
       
@@ -1011,15 +1023,19 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
     ! ==============================================================================================
     ! RAINEY from here =============================================================================
       
-    IF (InitInp%RaineyF) THEN
-      
-        InitOut%WaveElevPx (InitOut%NStepWave,:)   = InitOut%WaveElevPx (0,:)
-        InitOut%WaveElevPy (InitOut%NStepWave,:)   = InitOut%WaveElevPy (0,:)
+    IF (InitInp%RaineyF .OR. InitInp%LagrangeF) THEN
       
         InitOut%WaveVelPx (InitOut%NStepWave,:,:)  = InitOut%WaveVelPx (0,:,:)
         InitOut%WaveVelPy (InitOut%NStepWave,:,:)  = InitOut%WaveVelPy (0,:,:)
         InitOut%WaveVelPz (InitOut%NStepWave,:,:)  = InitOut%WaveVelPz (0,:,:)
+        
+        IF (InitInp%RaineyF) THEN 
       
+            InitOut%WaveElevPx (InitOut%NStepWave,:)   = InitOut%WaveElevPx (0,:)
+            InitOut%WaveElevPy (InitOut%NStepWave,:)   = InitOut%WaveElevPy (0,:)
+        
+        END IF
+        
     END IF
       
     ! until here ===================================================================================   
