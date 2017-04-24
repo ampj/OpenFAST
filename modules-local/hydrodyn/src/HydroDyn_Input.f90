@@ -81,6 +81,19 @@ FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
 
          END IF
 
+    ! ==============================================================================================
+    ! RAINEY from here =============================================================================
+
+    ! Add a case for the channels related to Rainey surface intersection force
+
+      ELSE IF ( INDEX( 'RNSI', testStr ) > 0 ) THEN     ! We know all those channels start with the string RnSI
+      
+        CheckMeshOutput = .TRUE.
+        RETURN
+
+    ! until here ===================================================================================   
+    ! ==============================================================================================
+         
       ELSE IF ( INDEX( 'jJ', outputTmp(1:1) ) == 0  .AND. ( testStr /= 'WAVE' )  ) THEN
          ! Invalid output label because the label does not start: -M,-m,-J,-j,_M,_m,_J,_j,MM,mM,Mm,mm,MJ,mJ,Mj,mj, j,J,m,M
          CheckMeshOutput = .FALSE.

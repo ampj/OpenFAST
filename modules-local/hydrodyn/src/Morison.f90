@@ -4106,6 +4106,11 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 !      INTEGER, ALLOCATABLE                                          :: distribToNodeIndx(:)
 !      INTEGER, ALLOCATABLE                                          :: lumpedToNodeIndx(:)
       
+    ! Local variables
+                  
+      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
+      CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -4202,9 +4207,11 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
     ! ==============================================================================================
     ! RAINEY from here =============================================================================
 
-    ! Pass on the Rainey data
+    ! Pass on the Rainey flag
 
     p%RaineyF = InitInp%RaineyF
+    
+    ! Allocate data for gradients
     
     IF (InitInp%RaineyF) THEN
     
@@ -4250,6 +4257,24 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
         p%WaveVelPz = InitInp%WaveVelPz
     
     END IF
+    
+    ! Allocate the data for point force calculations
+    
+    ALLOCATE ( m%RnSIPos(3), STAT = ErrStat )
+    IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating space for RnSIPos array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+    END IF
+    m%RnSIPos = 0.0_ReKi
+    
+    ALLOCATE ( m%RnSIF(3), STAT = ErrStat )
+    IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating space for RnSIF array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+    END IF
+    m%RnSIF = 0.0_ReKi   
 
     ! until here ===================================================================================   
     ! ==============================================================================================      
@@ -4283,7 +4308,63 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
       
      ! CALL CreateSuperMesh( InitInp%NNodes, InitInp%Nodes, InitInp%NElements, InitInp%Elements, p%NSuperMarkers, p%SuperMarkers, InitOut%LumpedMesh, ErrStat, ErrMsg )
       
+    ! ==============================================================================================
+    ! RAINEY from here =============================================================================
+
+     IF (InitInp%RaineyF) THEN
      
+     ! Create the mesh for the Rainey surface intersection force
+     
+        CALL MeshCreate( BlankMesh        = m%RnSIMesh      &
+                     ,IOS          = COMPONENT_OUTPUT       &
+                     ,NNodes       = 1                      &
+                     ,Force        = .TRUE.                 &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_Init' )
+        IF (ErrStat >= AbortErrLev) THEN
+            !CALL Cleanup()
+            RETURN
+        END IF
+        
+        CALL MeshPositionNode ( m%RnSIMesh,  1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2 ) ! orientation is identity by default
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_Init' )
+        IF (ErrStat >= AbortErrLev) THEN
+            !CALL Cleanup()
+            RETURN
+        END IF
+
+        ! Create an element from this point      
+
+        CALL MeshConstructElement ( Mesh = m%RnSIMesh           &
+                              , Xelement = ELEMENT_POINT        &
+                              , P1       = 1                    &   ! Node number
+                              , ErrStat  = ErrStat2             &
+                              , ErrMess  = ErrMsg2              )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_Init' )
+        IF (ErrStat >= AbortErrLev) THEN
+            !CALL Cleanup()
+            RETURN
+        END IF
+      
+        ! Commit mesh
+	  
+        CALL MeshCommit ( m%RnSIMesh, ErrStat2, ErrMsg2 )   
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_Init' )
+        IF (ErrStat >= AbortErrLev) THEN
+            !CALL Cleanup()
+            RETURN
+        END IF
+            
+        ! Initialize fields
+
+        m%RnSIMesh%Force     = 0.0_ReKi   
+        m%RnSIMesh%RemapFlag = .TRUE.
+      
+     END IF
+
+    ! until here ===================================================================================   
+    ! ==============================================================================================
      
       
       
@@ -4611,10 +4692,58 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       REAL(ReKi)                                        :: kGk              ! RAINEY - Product k.(G*k) for given node and time step
       REAL(ReKi)                                        :: rotV(3)
       REAL(ReKi)                                        :: vrelkk(3)        ! RAINEY - Product (vrel.k)*k for given node and time step
+      !REAL(ReKi)                                        :: RnSIPos(3)       ! RAINEY - Position where the Rainey surface intersection force is applied
+      !REAL(ReKi)                                        :: RnSIF(3)         ! RAINEY - Rainey surface intersection force
+                  
+      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
+      CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      
       ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
+      
+      ! ==============================================================================================
+      ! RAINEY from here =============================================================================
+
+      ! Computations related to the Rainey surface intersection force
+      
+      IF (p%RaineyF) THEN
+      
+        ! Point where the Rainey surface intersection force is applied
+      
+        m%RnSIPos(1) = 0
+        m%RnSIPos(2) = 0
+        m%RnSIPos(3) = 0
+      
+        ! Rainey surface intersection force
+
+        m%RnSIF(1) = 0!Time*0.5
+        m%RnSIF(2) = 0
+        m%RnSIF(3) = 0
+        
+        ! Transfer position and force to point mesh
+        m%RnSIMesh%Force(1,1) = m%RnSIF(1)
+        m%RnSIMesh%Force(2,1) = m%RnSIF(2)
+        m%RnSIMesh%Force(3,1) = m%RnSIF(3)
+        
+        ! Set remap flag
+
+        m%RnSIMesh%RemapFlag = .TRUE.
+
+        ! Create the mesh mapping because the location of the node in the point mesh changed
+
+        CALL MeshMapCreate( m%RnSIMesh, y%DistribMesh, m%R_P_2_M_L,  ErrStat2, ErrMsg2  )
+        CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Morison_CalcOutput')
+   
+        ! Transfer the point force to the line mesh
+        CALL Transfer_Point_to_Line2( m%RnSIMesh, y%DistribMesh, m%R_P_2_M_L, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD (u_HD%Morison%DistribMesh)' )
+      
+      END IF
+      
+      ! until here ===================================================================================   
+      ! ==============================================================================================
       
       
          ! Compute outputs here:
@@ -4661,7 +4790,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          ! ==============================================================================================
          ! RAINEY from here =============================================================================
          
-         ! If Rainey flag is true, we enhance the inertia term D_F_I with the Rainey contributions to distributed loads
+         ! If Rainey flag is true, we augment the inertia term D_F_I with the Rainey contributions to distributed loads
          
          IF (p%RaineyF) THEN
          
@@ -4731,7 +4860,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                m%D_F_AM(I,J)    = m%D_F_AM_M(I,J) + m%D_F_AM_MG(I,J) + m%D_F_AM_F(I,J)           
                m%D_F_D(I,J) = elementWaterState * vmag*v(I) * p%D_dragConst(J)      
                m%D_F_B(I,J) = elementWaterState * p%D_F_B(I,J)
-               y%DistribMesh%Force(I,J) = m%D_F_AM(I,J) + m%D_F_D(I,J)  + m%D_F_I(I,J) + m%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J)
+               !y%DistribMesh%Force(I,J) = m%D_F_AM(I,J) + m%D_F_D(I,J)  + m%D_F_I(I,J) + m%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J)
+               ! RAINEY - Now we accumulate the loads, since the Rainey surface intersection force was mapped to this mesh
+               y%DistribMesh%Force(I,J) = m%D_F_AM(I,J) + m%D_F_D(I,J)  + m%D_F_I(I,J) + m%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J) + y%DistribMesh%Force(I,J) 
+               
             ELSE
                m%D_F_B(I,J) = elementWaterState * p%D_F_B(I,J)
                y%DistribMesh%Moment(I-3,J) =   m%D_F_B(I,J) + p%D_F_BF(I,J)     
@@ -4805,7 +4937,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             
          END DO      
       ENDDO
-     
+      
          ! OutSwtch determines whether or not to actually output results via the WriteOutput array
          ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
          ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided

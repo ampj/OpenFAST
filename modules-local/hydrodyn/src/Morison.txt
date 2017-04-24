@@ -19,7 +19,7 @@
 include   Registry_NWTC_Library.txt
 #
 #
-param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs               -       4032    -         ""    -
+param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs               -       4038    -         ""    -
 typedef   Morison/Morison              Morison_JointType             INTEGER          JointID                  -          -        -         ""    -
 typedef   ^                            ^                             ReKi             JointPos                 {3}        -        -         ""    -
 typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         ""    -
@@ -227,7 +227,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
+typedef   ^                            ^                             CHARACTER(10)            OutList                          {4038}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
@@ -302,6 +302,11 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     L_FA                            {:}{:}         -         -         "Fluid acceleration at point element node"   -
 typedef   ^                            ^                             ReKi                     L_FDynP                         {:}            -         -         "Fluid dynamic pressure at point element node"   -
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
+typedef   ^                            ^                             ReKi					  RnSIPos						  {:}            -         -         "RAINEY - Position where the Rainey surface intersection force is applied"   -
+typedef   ^                            ^                             ReKi					  RnSIF						      {:}            -         -         "RAINEY - Rainey surface intersection force"   -
+typedef   ^                            ^							 MeshType                 RnSIMesh                        -              -         -         "RAINEY - Mesh with Rainey surface intersection force"      -
+typedef   ^                            ^							 MeshMapType              R_P_2_M_L                       -              -         -         "RAINEY - Map Rainey surface intersection force to the Morison line mesh"
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
